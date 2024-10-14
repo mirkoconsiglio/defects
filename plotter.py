@@ -139,16 +139,16 @@ def chen_plot(directory):
 	ax.grid(visible=True, which='both', axis='both')
 	
 	for file in os.listdir(directory):
-		if file.endswith('.json'):
+		if file.endswith('d_1.json'):
 			file_path = os.path.join(directory, file)
 			
 			with open(file_path, 'r') as json_file:
 				data = json.load(json_file)
 			
 			eps_d_list = [i['eps_d'] for i in data]
-			gme_list = [i['chen_measure'] for i in data]
+			chen_list = [i['chen_measure'] for i in data]
 			
-			ax.plot(eps_d_list, gme_list, marker='.', markersize=10, label=fr'$d={data[0]['d']}$')
+			ax.plot(eps_d_list, chen_list, marker='.', markersize=10, label=fr'$d={data[0]['d']}$')
 	
 	ax.legend()
 	plt.savefig(f'chen_{directory}.pdf')

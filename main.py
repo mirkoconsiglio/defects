@@ -24,7 +24,6 @@ from collections import OrderedDict
 
 import numpy as np
 from matplotlib import rc
-from scipy.optimize import minimize
 
 from utils import huber_measure, chen_measure
 
