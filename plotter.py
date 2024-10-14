@@ -1,9 +1,11 @@
 import json
-
+import os
 import matplotlib.pyplot as plt
 from matplotlib import rc
 import colorcet as cc
 import numpy as np
+
+from utils import gme, concurrences
 
 rc('font', **{'family': 'Times New Roman', 'sans-serif': ['Times New Roman'], 'size': 18})
 rc('text', usetex=True)
@@ -84,5 +86,74 @@ def main():
 	plt.show()
 
 
+def conc_plot(directory):
+	fig, ax = plt.subplots(figsize=(12, 8))
+	ax.set_xlabel(r'$-\epsilon d$')
+	ax.set_ylabel(r'$C_{\mathrm{GME}}$')
+	ax.grid(visible=True, which='both', axis='both')
+	
+	for file in os.listdir(directory):
+		if file.endswith('.json'):
+			file_path = os.path.join(directory, file)
+			
+			with open(file_path, 'r') as json_file:
+				data = json.load(json_file)
+			
+			eps_d_list = [i['eps_d'] for i in data]
+			conc_list = [concurrences(i['matrix'])[0] for i in data]
+			
+			ax.plot(eps_d_list, conc_list, label=fr'$d={data[0]['d']}$')
+	
+	ax.legend()
+	plt.savefig('conc_12.pdf')
+	plt.show()
+
+
+def gme_plot(directory):
+	fig, ax = plt.subplots(figsize=(12, 8))
+	ax.set_xlabel(r'$-\epsilon d$')
+	ax.set_ylabel(r'$C_{\mathrm{GME}}$')
+	ax.grid(visible=True, which='both', axis='both')
+	
+	for file in os.listdir(directory):
+		if file.endswith('.json'):
+			file_path = os.path.join(directory, file)
+			
+			with open(file_path, 'r') as json_file:
+				data = json.load(json_file)
+			
+			eps_d_list = [i['eps_d'] for i in data if i['eps_d'] <= 1]
+			gme_list = [gme(i['matrix']) for i in data][:len(eps_d_list)]
+			
+			ax.plot(eps_d_list, gme_list, marker='.', markersize=10, label=fr'$d={data[0]['d']}$')
+		
+	ax.legend()
+	plt.savefig(f'gme_{directory}.pdf')
+	plt.show()
+	
+	
+def chen_plot(directory):
+	fig, ax = plt.subplots(figsize=(12, 8))
+	ax.set_xlabel(r'$-\epsilon d$')
+	ax.set_ylabel(r'$C_{\mathrm{GME}}$')
+	ax.grid(visible=True, which='both', axis='both')
+	
+	for file in os.listdir(directory):
+		if file.endswith('.json'):
+			file_path = os.path.join(directory, file)
+			
+			with open(file_path, 'r') as json_file:
+				data = json.load(json_file)
+			
+			eps_d_list = [i['eps_d'] for i in data]
+			gme_list = [i['chen_measure'] for i in data]
+			
+			ax.plot(eps_d_list, gme_list, marker='.', markersize=10, label=fr'$d={data[0]['d']}$')
+	
+	ax.legend()
+	plt.savefig(f'chen_{directory}.pdf')
+	plt.show()
+	
+
 if __name__ == '__main__':
-	main()
+	chen_plot('h_2.0')
