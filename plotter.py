@@ -139,7 +139,7 @@ def chen_plot(directory):
 	ax.grid(visible=True, which='both', axis='both')
 	
 	for file in os.listdir(directory):
-		if file.endswith('d_1.json'):
+		if file.endswith('.json'):
 			file_path = os.path.join(directory, file)
 			
 			with open(file_path, 'r') as json_file:
