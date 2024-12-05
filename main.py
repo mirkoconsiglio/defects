@@ -23,12 +23,6 @@ import os
 from collections import OrderedDict
 
 import numpy as np
-from matplotlib import rc
-
-from utils import huber_measure, chen_measure
-
-rc('font', **{'family': 'Times New Roman', 'sans-serif': ['Times New Roman'], 'size': 18})
-rc('text', usetex=True)
 
 
 # # this dumb function doesn't work when in dependencies.py file, so we put it here
@@ -799,6 +793,102 @@ def A_matrix_choice2(L: int, J: float, h: float, disorder_array: np.ndarray):
 
 
 ############################## MAIN CODE ###########################
+def main_2():
+	# system parameters
+	L = 1024
+	J = 1.0
+	h = 2.0
+	mid_defect = L // 2
+	
+	# position and strength of impurities definitions
+	eps_max = 5
+	steps = eps_max * 10 + 1
+	
+	os.makedirs(f'h_{h:.1f}', exist_ok=True)
+	
+	for d in range(1, 10):
+		d = 5
+		print(f'd = {d}')
+		end = eps_max / d
+		eps_list = np.linspace(0, end, steps).tolist()
+		l = mid_defect - d
+		m = mid_defect
+		n = mid_defect + d
+		data = []
+		for eps in eps_list:
+			eps = 3.5 / d
+			epsilon_l = -eps
+			epsilon_m = -eps
+			epsilon_n = -eps
+			
+			disorder_array = np.zeros(L)
+			disorder_array[l - 1] = epsilon_l
+			disorder_array[m - 1] = epsilon_m
+			disorder_array[n - 1] = epsilon_n
+			print(f'eps_d = {eps * d}')
+			
+			############ FREE FERMIONIC CODE USING LIEB-SCHULTZ-MATTIS APPROACH ##########
+			
+			# GENERATE TWO A MATRICES AND DECIDE ON THE PROPER GROUND-STATE
+			A1 = A_matrix_choice1(L, J, h, disorder_array)
+			lambda_square1, phik1 = np.linalg.eigh(A1 @ A1)
+			energy1 = -0.5 * np.sum(np.sqrt(lambda_square1[lambda_square1 >= 0]))
+			
+			A2 = A_matrix_choice2(L, J, h, disorder_array)
+			lambda_square2, phik2 = np.linalg.eigh(A2 @ A2)
+			energy2 = -0.5 * np.sum(np.sqrt(lambda_square2[lambda_square2 >= 0]))
+			
+			print(lambda_square1[:5])
+			print(lambda_square2[:5])
+			print(energy1, energy2, energy1 - energy2)
+			
+			lambda_square = lambda_square1.copy()
+			phik = phik1.copy()
+			A = A1.copy()
+			
+			psik = np.zeros((L, L))
+			for i in range(L):
+				psik[:, i] = (1.0 / np.sqrt(lambda_square[i])) * (phik[:, i] @ A)
+			
+			# generate G matrix
+			# here python inverts row and columns, so we do an additional transposition compared to the notes
+			G_correlation_matrix = np.transpose(-psik @ np.transpose(phik))
+			
+			# generate the list of relevant fermionic correlators
+			listaFF = generate_relevant_correlatorsAB(L, G_correlation_matrix, l, m, n)
+			
+			# generate the Reduced Density Matrix
+			RDM_fermionic = RDM_FF(listaFF)
+			
+			# print it out and round of the values for better visual presentation in the terminal
+			# print('-------------------- FREE FERMIONS RDM ----------------')
+			matrix_1 = RDM_fermionic.real
+			
+			lambda_square = lambda_square2.copy()
+			phik = phik2.copy()
+			A = A2.copy()
+			
+			psik = np.zeros((L, L))
+			for i in range(L):
+				psik[:, i] = (1.0 / np.sqrt(lambda_square[i])) * (phik[:, i] @ A)
+			
+			# generate G matrix
+			# here python inverts row and columns, so we do an additional transposition compared to the notes
+			G_correlation_matrix = np.transpose(-psik @ np.transpose(phik))
+			
+			# generate the list of relevant fermionic correlators
+			listaFF = generate_relevant_correlatorsAB(L, G_correlation_matrix, l, m, n)
+			
+			# generate the Reduced Density Matrix
+			RDM_fermionic = RDM_FF(listaFF)
+			
+			# print it out and round of the values for better visual presentation in the terminal
+			# print('-------------------- FREE FERMIONS RDM ----------------')
+			matrix_2 = RDM_fermionic.real
+			
+			print(np.matrix.round(matrix_1 - matrix_2, 3))
+
+
 def main():
 	# system parameters
 	L = 1024
@@ -836,13 +926,13 @@ def main():
 			# GENERATE TWO A MATRICES AND DECIDE ON THE PROPER GROUND-STATE
 			A1 = A_matrix_choice1(L, J, h, disorder_array)
 			lambda_square1, phik1 = np.linalg.eigh(A1 @ A1)
-			energy1 = -0.5 * np.sum(np.sqrt(lambda_square1))
+			energy1 = -0.5 * np.sum(np.sqrt(lambda_square1[lambda_square1 >= 0]))
 			
 			A2 = A_matrix_choice2(L, J, h, disorder_array)
 			lambda_square2, phik2 = np.linalg.eigh(A2 @ A2)
-			energy2 = -0.5 * np.sum(np.sqrt(lambda_square2))
+			energy2 = -0.5 * np.sum(np.sqrt(lambda_square2[lambda_square2 >= 0]))
 			
-			# print(energy1, energy2, energy1 - energy2)
+			print(energy1, energy2, energy1 - energy2)
 			
 			if energy1 < energy2 or np.isnan(energy2):
 				lambda_square = lambda_square1.copy()
@@ -856,52 +946,51 @@ def main():
 			psik = np.zeros((L, L))
 			for i in range(L):
 				psik[:, i] = (1.0 / np.sqrt(lambda_square[i])) * (phik[:, i] @ A)
-			
+
 			# generate G matrix
 			# here python inverts row and columns, so we do an additional transposition compared to the notes
 			G_correlation_matrix = np.transpose(-psik @ np.transpose(phik))
-			
+
 			# generate the list of relevant fermionic correlators
 			listaFF = generate_relevant_correlatorsAB(L, G_correlation_matrix, l, m, n)
-			
+
 			# generate the Reduced Density Matrix
 			RDM_fermionic = RDM_FF(listaFF)
-			
+
 			# print it out and round of the values for better visual presentation in the terminal
 			# print('-------------------- FREE FERMIONS RDM ----------------')
 			matrix = RDM_fermionic.real
+			u, v = np.linalg.eigh(matrix)
 			
-			# u, v = np.linalg.eigh(matrix)
-			#
-			# print(np.matrix.round(matrix, 3))
-			# print(u)
-			# print(np.matrix.round(v, 3))
-			# quit()
-			
-			data.append(dict(d=d, eps_d=eps * d, matrix=matrix.tolist()))
-			
-		with open(f'h_{h:.1f}/d_{d}.json', 'w') as json_file:
+			data.append(dict(d=d, eps_d=eps * d, u=u.tolist()))
+		
+		# with open(f'h_{h:.1f}/d_{d}.json', 'w') as json_file:
+		# 	json.dump(data, json_file, indent=4)
+		
+		os.makedirs('test', exist_ok=True)
+		with open(f'test/d_{d}.json', 'w') as json_file:
 			json.dump(data, json_file, indent=4)
 
 
 if __name__ == '__main__':
-	# main()
-	
-	directory = 'h_2.0'
-	
-	for file in os.listdir(directory):
-		if file.endswith('.json'):
-			file_path = os.path.join(directory, file)
+	main()
 
-			with open(file_path, 'r') as json_file:
-				data = json.load(json_file)
-
-			for i, _data in enumerate(data):
-				print(_data['d'], _data['eps_d'])
-
-				matrix = _data['matrix']
-
-				data[i]['chen_measure'] = chen_measure(matrix)
-
-			with open(file_path, 'w') as json_file:
-				json.dump(data, json_file, indent=4)
+# directory = 'h_2.0'
+#
+# for file in os.listdir(directory):
+# 	if file.endswith('.json'):
+# 		file_path = os.path.join(directory, file)
+#
+# 		with open(file_path, 'r') as json_file:
+# 			data = json.load(json_file)
+#
+# 		for i, _data in enumerate(data):
+# 			print(_data['d'], _data['eps_d'])
+#
+# 			matrix = _data['matrix']
+#
+# 			data[i]['huber_measure'] = huber_measure(matrix, 2)
+# 			data[i]['chen_measure'] = chen_measure(matrix, 2)
+#
+# 			with open(file_path, 'w') as json_file:
+# 				json.dump(data, json_file, indent=4)
